@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solucionador de Ecuaciones - Métodos Numéricos</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        /* BASE STYLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Fondo claro y suave */
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1e3a8a; /* Azul oscuro corporativo */
+            margin-bottom: 25px;
+            font-size: 2.2em;
+            font-weight: 700;
+        }
+
+        /* INPUT SECTION STYLES */
+        .input-section {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e7ff;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* PARAMETER LAYOUT (GRID for responsiveness) */
+        .method-params {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columnas en desktop */
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        /* BOTÓN */
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #152c50; /* Azul brillante */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #08225a;
+            transform: translateY(-1px);
+        }
+
+        /* RESULTS SECTION */
+        .results {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 25px;
+            border: 1px solid #e0e7ff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        
+        /* Result items (flex for responsive) */
+        .summary-results {
+            display: flex;
+            flex-wrap: wrap; /* Permite que los elementos se envuelvan en móvil */
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .result-item {
+            flex: 1 1 200px; /* Base de 200px, crece y encoge */
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #3b82f6;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+        }
+        .result-value {
+            font-size: 1.1em;
+            color: #333;
+            word-break: break-all; /* Para números muy largos */
+        }
+        
+        /* TABLE STYLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        th, td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9em;
+        }
+        th {
+            background: #eff6ff; /* Azul muy claro */
+            color: #1e3a8a;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        /* GRAPH STYLES */
+        #plot-area {
+            margin: 20px 0;
+            border: 1px solid #e0e7ff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        /* UTILS */
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        .error {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #b91c1c;
+            margin-top: 15px;
+        }
+        
+        /* 📱 MEDIA QUERIES (RESPONSIVE) */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .method-params {
+                grid-template-columns: repeat(2, 1fr); /* 2 columnas en tablets/móviles */
+            }
+            .summary-results {
+                flex-direction: column; /* Apilar resultados en móvil */
+            }
+            .result-item {
+                flex-basis: auto;
+            }
+            th, td {
+                padding: 10px 4px;
+                font-size: 0.8em;
+            }
+        }
+        
+        /* Asegurar que la ecuación ocupe todo el ancho */
+        .equation-input {
+            grid-column: 1 / -1; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Solucionador Numérico Avanzado</h1>
+        
+        <div class="info-box">
+            <p><strong>Ejemplo:</strong> `x^3 - exp(0.8*x) - 20` (usar `Math.exp(0.8*x)` internamente)</p>
+            <p><strong>Operaciones:</strong> `+`, `-`, `*`, `/`, `^`, `sin()`, `cos()`, `tan()`, `exp()`, `log()`, `sqrt()`</p>
+        </div>
+
+        <div class="input-section">
+            <div class="form-group equation-input">
+                <label for="equation">Ecuación f(x) = 0:</label>
+                <input type="text" id="equation" placeholder="Ej: x^3 - x - 2" value="x^3 - exp(0.8*x) - 20">
+            </div>
+            
+            <div class="form-group">
+                <label for="method">Método de solución:</label>
+                <select id="method">
+                    <option value="bisection">Método de Bisección</option>
+                    <option value="newton">Método de Newton-Raphson</option>
+                    <option value="secant">Método de la Secante</option>
+                </select>
+            </div>
+            
+            <div class="method-params" id="params">
+                <div class="form-group">
+                    <label for="param1">Valor a/x₀:</label>
+                    <input type="number" id="param1" step="0.1" value="7.4">
+                </div>
+                <div class="form-group">
+                    <label for="param2">Valor b/x₁:</label>
+                    <input type="number" id="param2" step="0.1" value="7.5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tolerance">Tolerancia (ε):</label>
+                    <input type="number" id="tolerance" step="0.0001" value="0.0001">
+                </div>
+                <div class="form-group">
+                    <label for="maxIter">Iteraciones máx:</label>
+                    <input type="number" id="maxIter" value="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="graphMinX">Mínimo X (Gráfica):</label>
+                    <input type="number" id="graphMinX" value="0" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="graphMaxX">Máximo X (Gráfica):</label>
+                    <input type="number" id="graphMaxX" value="10" step="0.5">
+                </div>
+            </div>
+
+            <button onclick="solve()">Resolver y Graficar</button>
+        </div>
+
+        <div class="results" id="results">
+            </div>
+    </div>
+
+    <script>
+        // --- CÓDIGO JAVASCRIPT ---
+
+        // Configuración inicial de parámetros al cambiar de método
+        document.getElementById('method').addEventListener('change', function() {
+            const method = this.value;
+            const param1Label = document.querySelector('label[for="param1"]');
+            const param2Label = document.querySelector('label[for="param2"]');
+
+            if (method === 'bisection') {
+                param1Label.textContent = 'Valor a:';
+                param2Label.textContent = 'Valor b:';
+                document.getElementById('param1').value = '7.4';
+                document.getElementById('param2').value = '7.5';
+                document.getElementById('param2').parentElement.style.display = 'block';
+            } else if (method === 'newton') {
+                param1Label.textContent = 'Valor inicial x₀:';
+                document.getElementById('param1').value = '7.4';
+                document.getElementById('param2').parentElement.style.display = 'none';
+            } else if (method === 'secant') {
+                param1Label.textContent = 'Valor x₀:';
+                param2Label.textContent = 'Valor x₁:';
+                document.getElementById('param1').value = '7.4';
+                document.getElementById('param2').value = '7.5';
+                document.getElementById('param2').parentElement.style.display = 'block';
+            }
+        });
+
+        // 1. EVALUACIÓN DE LA FUNCIÓN (con correcciones para notación)
+        function evaluateFunction(expr, x) {
+            try {
+                expr = expr.replace(/,/g, '.'); // Convertir comas a puntos
+                expr = expr.replace(/\^/g, '**');
+                expr = expr.replace(/(\d)([a-z])/gi, '$1*$2');
+                expr = expr.replace(/\bsin\b/g, 'Math.sin');
+                expr = expr.replace(/\bcos\b/g, 'Math.cos');
+                expr = expr.replace(/\btan\b/g, 'Math.tan');
+                expr = expr.replace(/\bexp\b/g, 'Math.exp'); 
+                expr = expr.replace(/\blog\b/g, 'Math.log'); 
+                expr = expr.replace(/\bsqrt\b/g, 'Math.sqrt');
+                expr = expr.replace(/\bx\b/g, `(${x})`);
+                return eval(expr);
+            } catch (e) {
+                console.error("Error al evaluar la función:", e);
+                throw new Error('Error en la expresión de la función. Revísala.');
+            }
+        }
+
+        // 2. DERIVADA NUMÉRICA (para Newton)
+        function derivative(expr, x) {
+            const h = 0.00001;
+            return (evaluateFunction(expr, x + h) - evaluateFunction(expr, x - h)) / (2 * h);
+        }
+
+        // 3. MÉTODOS NUMÉRICOS (Bisección, Newton, Secante - Sin cambios en la lógica)
+        function bisectionMethod(expr, a, b, tol, maxIter) {
+            const iterations = [];
+            let fa = evaluateFunction(expr, a);
+            let fb = evaluateFunction(expr, b);
+            if (fa * fb > 0) {
+                throw new Error('f(a) y f(b) deben tener signos opuestos. Intenta otro intervalo.');
+            }
+            for (let i = 0; i < maxIter; i++) {
+                const c = (a + b) / 2;
+                const fc = evaluateFunction(expr, c);
+                const error = Math.abs(b - a) / 2;
+                iterations.push({ iter: i + 1, a: a.toFixed(10), b: b.toFixed(10), c: c.toFixed(10), fc: fc.toFixed(10), error: error.toFixed(12) });
+                if (error < tol || Math.abs(fc) < tol) { return { root: c, iterations, converged: true }; }
+                if (fa * fc < 0) { b = c; fb = fc; } else { a = c; fa = fc; }
+            }
+            return { root: (a + b) / 2, iterations, converged: false };
+        }
+        function newtonMethod(expr, x0, tol, maxIter) {
+            const iterations = [];
+            let x = x0;
+            for (let i = 0; i < maxIter; i++) {
+                const fx = evaluateFunction(expr, x);
+                const fpx = derivative(expr, x);
+                if (Math.abs(fpx) < 1e-10) { throw new Error('Derivada cercana a cero. El método falló.'); }
+                const xNew = x - fx / fpx;
+                const error = Math.abs(xNew - x);
+                iterations.push({ iter: i + 1, x: x.toFixed(10), fx: fx.toFixed(10), fpx: fpx.toFixed(10), xNew: xNew.toFixed(10), error: error.toFixed(12) });
+                if (error < tol || Math.abs(fx) < tol) { return { root: xNew, iterations, converged: true }; }
+                x = xNew;
+            }
+            return { root: x, iterations, converged: false };
+        }
+        function secantMethod(expr, x0, x1, tol, maxIter) {
+            const iterations = [];
+            for (let i = 0; i < maxIter; i++) {
+                const fx0 = evaluateFunction(expr, x0);
+                const fx1 = evaluateFunction(expr, x1);
+                if (Math.abs(fx1 - fx0) < 1e-10) { throw new Error('División por cero. El método falló.'); }
+                const x2 = x1 - fx1 * (x1 - x0) / (fx1 - fx0);
+                const error = Math.abs(x2 - x1);
+                iterations.push({ iter: i + 1, x0: x0.toFixed(10), x1: x1.toFixed(10), fx1: fx1.toFixed(10), x2: x2.toFixed(10), error: error.toFixed(12) });
+                if (error < tol || Math.abs(fx1) < tol) { return { root: x2, iterations, converged: true }; }
+                x0 = x1;
+                x1 = x2;
+            }
+            return { root: x1, iterations, converged: false };
+        }
+
+        // 4. FUNCIÓN PARA GRAFICAR
+        function plotFunction(equationExpr, root, minX, maxX) {
+            const xValues = [];
+            const yValues = [];
+            const numPoints = 300; 
+
+            for (let i = 0; i <= numPoints; i++) {
+                const x = minX + (maxX - minX) * (i / numPoints);
+                try {
+                    const y = evaluateFunction(equationExpr, x);
+                    xValues.push(x);
+                    yValues.push(y);
+                } catch (e) {
+                    // Ignorar puntos que no se pueden evaluar (ej. log de negativo)
+                }
+            }
+
+            const traceFunction = {
+                x: xValues,
+                y: yValues,
+                mode: 'lines',
+                name: `f(x)`,
+                line: { color: '#3b82f6', width: 3 } 
+            };
+            const traceRoot = {
+                x: [root],
+                y: [evaluateFunction(equationExpr, root)],
+                mode: 'markers',
+                name: 'Raíz',
+                marker: { color: '#ef4444', size: 12, symbol: 'circle' } 
+            };
+            const traceZero = { // Línea y=0
+                x: [minX, maxX],
+                y: [0, 0],
+                mode: 'lines',
+                name: 'Eje X (f(x)=0)',
+                line: { color: '#9ca3af', width: 1, dash: 'dot' }
+            };
+
+            const data = [traceFunction, traceZero, traceRoot];
+
+            const layout = {
+                title: `Gráfica de la función ${equationExpr}`,
+                xaxis: { title: 'x', zeroline: true },
+                yaxis: { title: 'f(x)', zeroline: true },
+                hovermode: 'closest',
+                template: 'plotly_white',
+                margin: { t: 40, b: 40, l: 40, r: 40 },
+                responsive: true
+            };
+
+            Plotly.newPlot('plot-area', data, layout, {responsive: true});
+        }
+
+
+        // 5. FUNCIÓN PRINCIPAL DE RESOLUCIÓN Y DISPLAY
+        function solve() {
+            const expr = document.getElementById('equation').value;
+            const method = document.getElementById('method').value;
+            const param1 = parseFloat(document.getElementById('param1').value);
+            const param2 = parseFloat(document.getElementById('param2').value);
+            const tol = parseFloat(document.getElementById('tolerance').value);
+            const maxIter = parseInt(document.getElementById('maxIter').value);
+
+            const graphMinX = parseFloat(document.getElementById('graphMinX').value);
+            const graphMaxX = parseFloat(document.getElementById('graphMaxX').value);
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.classList.remove('show');
+
+            try {
+                let result;
+                if (method === 'bisection') {
+                    result = bisectionMethod(expr, param1, param2, tol, maxIter);
+                } else if (method === 'newton') {
+                    result = newtonMethod(expr, param1, tol, maxIter);
+                } else if (method === 'secant') {
+                    result = secantMethod(expr, param1, param2, tol, maxIter);
+                }
+
+                displayResults(result, method, expr);
+                plotFunction(expr, result.root, graphMinX, graphMaxX); 
+
+            } catch (e) {
+                resultsDiv.innerHTML = `<div class="error"><strong>Error de Cálculo:</strong> ${e.message}</div>`;
+                Plotly.purge('plot-area'); // Limpiar la gráfica
+                resultsDiv.classList.add('show');
+            }
+        }
+
+        function displayResults(result, method, equationExpr) {
+            const resultsDiv = document.getElementById('results');
+            const methodNames = {
+                bisection: 'Bisección',
+                newton: 'Newton-Raphson',
+                secant: 'Secante'
+            };
+            let tableHTML = '';
+            let tableHeaders = '';
+            
+            // Definir encabezados de la tabla
+            if (method === 'bisection') {
+                tableHeaders = '<tr><th>Iteración</th><th>a</th><th>b</th><th>c</th><th>f(c)</th><th>Error</th></tr>';
+                tableHTML = result.iterations.map(iter => `<tr><td>${iter.iter}</td><td>${iter.a}</td><td>${iter.b}</td><td>${iter.c}</td><td>${iter.fc}</td><td>${iter.error}</td></tr>`).join('');
+            } else if (method === 'newton') {
+                tableHeaders = '<tr><th>Iteración</th><th>x</th><th>f(x)</th><th>f\'(x)</th><th>x nuevo</th><th>Error</th></tr>';
+                tableHTML = result.iterations.map(iter => `<tr><td>${iter.iter}</td><td>${iter.x}</td><td>${iter.fx}</td><td>${iter.fpx}</td><td>${iter.xNew}</td><td>${iter.error}</td></tr>`).join('');
+            } else if (method === 'secant') {
+                tableHeaders = '<tr><th>Iteración</th><th>x₀</th><th>x₁</th><th>f(x₁)</th><th>x₂</th><th>Error</th></tr>';
+                tableHTML = result.iterations.map(iter => `<tr><td>${iter.iter}</td><td>${iter.x0}</td><td>${iter.x1}</td><td>${iter.fx1}</td><td>${iter.x2}</td><td>${iter.error}</td></tr>`).join('');
+            }
+            
+            // Estructura principal de resultados
+            resultsDiv.innerHTML = `
+                <h2>📊 Resultados - Método de ${methodNames[method]}</h2>
+                
+                <div id="plot-area" style="width: 100%; height: 400px;"></div>
+
+                <div class="summary-results">
+                    <div class="result-item">
+                        <div class="result-label">Raíz Encontrada:</div>
+                        <div class="result-value">${result.root.toFixed(12)}</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">f(raíz) (Verificación):</div>
+                        <div class="result-value">${evaluateFunction(equationExpr, result.root).toExponential(4)}</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Iteraciones:</div>
+                        <div class="result-value">${result.iterations.length}</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Estado:</div>
+                        <div class="result-value">${result.converged ? ' Convergencia Exitosa' : '⚠️ No convergió'}</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 20px; color: #1e3a8a;">Tabla de Iteraciones:</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            ${tableHeaders}
+                        </thead>
+                        <tbody>
+                            ${tableHTML}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            resultsDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>
